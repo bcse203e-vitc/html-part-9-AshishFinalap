@@ -1,125 +1,218 @@
+document.addEventListener("DOMContentLoaded", () => {
+    const bookBtns = document.querySelectorAll(".book-btn");
+    const modal = document.getElementById("form-modal");
+    const closeBtn = document.querySelector(".close-btn");
+    const form = document.getElementById("appointment-form");
+    const serviceDropdown = document.getElementById("service");
+    const appointmentList = document.getElementById("appointment-list");
+    const appointmentTable = document.getElementById("appointment-table");
+    const appointmentsHeading = document.getElementById("appointments-heading");
 
-const serviceButtons = document.querySelectorAll(".service-btn");
-const formPopup = document.getElementById("form-popup");
-const closeButtons = document.querySelectorAll(".close-btn");
-const appointmentForm = document.getElementById("appointment-form");
-const appointmentsTable = document.getElementById("appointments-table").getElementsByTagName("tbody")[0];
-const confirmationPopup = document.getElementById("confirmation-popup");
-const confirmationMessage = document.getElementById("confirmation-message");
+    const confirmationPopup = document.getElementById("confirmation-popup");
+    const confirmationMessage = document.getElementById("confirmation-message");
+    const closePopupBtn = document.getElementById("close-popup");
 
-serviceButtons.forEach(button => {
-  button.addEventListener("click", () => {
-    document.getElementById("service").value = button.getAttribute("data-service");
-    formPopup.style.display = "flex";
-  });
-});
+    const searchBox = document.getElementById("search-box");
+    const filterStatus = document.getElementById("filter-status");
 
-closeButtons.forEach(button => {
-  button.addEventListener("click", () => {
-    formPopup.style.display = "none";
-    confirmationPopup.style.display = "none";
-  });
-});
+    const nameInput = document.getElementById("name");
+    const emailInput = document.getElementById("email");
+    const phoneInput = document.getElementById("phone");
+    const datetimeInput = document.getElementById("datetime");
+    const termsCheckbox = document.getElementById("terms");
 
-appointmentForm.addEventListener("submit", (e) => {
-  e.preventDefault();
+    const nameError = document.getElementById("name-error");
+    const emailError = document.getElementById("email-error");
+    const phoneError = document.getElementById("phone-error");
+    const datetimeError = document.getElementById("datetime-error");
+    const termsError = document.getElementById("terms-error");
 
-  const name = document.getElementById("full-name").value.trim();
-  const email = document.getElementById("email").value.trim();
-  const phone = document.getElementById("phone").value.trim();
-  const dateTime = document.getElementById("date-time").value;
-  const terms = document.getElementById("terms").checked;
+    appointmentTable.style.display = "none";
+    appointmentsHeading.style.display = "none";
 
-  let isValid = true;
+    function loadAppointments() {
+        let appointments = JSON.parse(localStorage.getItem("appointments")) || [];
+        let searchQuery = searchBox?.value.toLowerCase() || "";
+        let filterValue = filterStatus?.value || "all";
 
-  if (!name) {
-    document.getElementById("name-error").textContent = "Name is required.";
-    document.getElementById("name-error").style.display = "block";
-    isValid = false;
-  } else {
-    document.getElementById("name-error").style.display = "none";
-  }
+        appointmentList.innerHTML = ""; 
 
-  if (!email.includes("@")) {
-    document.getElementById("email-error").textContent = "Invalid email format.";
-    document.getElementById("email-error").style.display = "block";
-    isValid = false;
-  } else {
-    document.getElementById("email-error").style.display = "none";
-  }
+        let filteredAppointments = appointments.filter(appointment =>
+            appointment.name.toLowerCase().includes(searchQuery) &&
+            (filterValue === "all" || appointment.status === filterValue)
+        );
 
-  if (phone.length !== 10 || isNaN(phone)) {
-    document.getElementById("phone-error").textContent = "Phone number must be 10 digits.";
-    document.getElementById("phone-error").style.display = "block";
-    isValid = false;
-  } else {
-    document.getElementById("phone-error").style.display = "none";
-  }
+        if (filteredAppointments.length > 0) {
+            appointmentTable.style.display = "table";
+            appointmentsHeading.style.display = "block";
+            filteredAppointments.forEach((appointment, index) => {
+                addAppointmentToTable(appointment, index);
+            });
+        } else {
+            appointmentTable.style.display = "none";
+            appointmentsHeading.style.display = "none";
+        }
+    }
 
-  if (new Date(dateTime) < new Date()) {
-    document.getElementById("date-error").textContent = "Date must be in the future.";
-    document.getElementById("date-error").style.display = "block";
-    isValid = false;
-  } else {
-    document.getElementById("date-error").style.display = "none";
-  }
+    bookBtns.forEach(btn => {
+        btn.addEventListener("click", () => {
+            serviceDropdown.value = btn.getAttribute("data-service");
+            modal.style.display = "flex";
+        });
+    });
 
-  if (!terms) {
-    document.getElementById("terms-error").textContent = "You must agree to the terms.";
-    document.getElementById("terms-error").style.display = "block";
-    isValid = false;
-  } else {
-    document.getElementById("terms-error").style.display = "none";
-  }
+    closeBtn.addEventListener("click", () => {
+        modal.style.display = "none";
+    });
 
-  if (isValid) {
+    window.addEventListener("click", (e) => {
+        if (e.target === modal) modal.style.display = "none";
+    });
 
-    const appointment = {
-      name,
-      email,
-      phone,
-      service: document.getElementById("service").value,
-      dateTime,
-      status: "Pending"
-    };
+    function validateName() {
+        if (nameInput.value.trim() === "") {
+            nameError.textContent = "Name cannot be empty.";
+            return false;
+        }
+        nameError.textContent = "";
+        return true;
+    }
 
-    let appointments = JSON.parse(localStorage.getItem("appointments")) || [];
-    appointments.push(appointment);
-    localStorage.setItem("appointments", JSON.stringify(appointments));
+    function validateEmail() {
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailPattern.test(emailInput.value)) {
+            emailError.textContent = "Enter a valid email.";
+            return false;
+        }
+        emailError.textContent = "";
+        return true;
+    }
 
-    confirmationMessage.textContent = `Thank you, ${name}! Your appointment for ${appointment.service} on ${new Date(dateTime).toLocaleString()} is confirmed.`;
-    confirmationPopup.style.display = "flex";
+    function validatePhone() {
+        const phonePattern = /^\d{10}$/;
+        if (!phonePattern.test(phoneInput.value)) {
+            phoneError.textContent = "Enter a valid 10-digit phone number.";
+            return false;
+        }
+        phoneError.textContent = "";
+        return true;
+    }
 
-    appointmentForm.reset();
-    formPopup.style.display = "none";
+    function validateDateTime() {
+        const selectedDate = new Date(datetimeInput.value);
+        const currentDate = new Date();
+        if (selectedDate <= currentDate) {
+            datetimeError.textContent = "Select a future date & time.";
+            return false;
+        }
+        datetimeError.textContent = "";
+        return true;
+    }
+
+    function validateTerms() {
+        if (!termsCheckbox.checked) {
+            termsError.textContent = "You must agree to the terms.";
+            return false;
+        }
+        termsError.textContent = "";
+        return true;
+    }
+
+    nameInput.addEventListener("input", validateName);
+    emailInput.addEventListener("input", validateEmail);
+    phoneInput.addEventListener("input", validatePhone);
+    datetimeInput.addEventListener("change", validateDateTime);
+    termsCheckbox.addEventListener("change", validateTerms);
+    searchBox?.addEventListener("input", loadAppointments);
+    filterStatus?.addEventListener("change", loadAppointments);
+
+    function addAppointmentToTable(appointment, index) {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td>${appointment.name}</td>
+            <td>${appointment.service}</td>
+            <td>${appointment.datetime}</td>
+            <td>
+                <select class="status-update" data-index="${index}">
+                    <option value="Pending" ${appointment.status === "Pending" ? "selected" : ""}>Pending</option>
+                    <option value="Confirmed" ${appointment.status === "Confirmed" ? "selected" : ""}>Confirmed</option>
+                    <option value="Cancelled" ${appointment.status === "Cancelled" ? "selected" : ""}>Cancelled</option>
+                </select>
+            </td>
+            <td>
+                <button class="reschedule-btn" data-index="${index}">Reschedule</button>
+                <button class="cancel-btn" data-index="${index}">Cancel</button>
+            </td>
+        `;
+        appointmentList.appendChild(row);
+    }
+
+    function showConfirmationPopup(name, service, datetime) {
+        confirmationMessage.textContent = `Thank you, ${name}! Your appointment for ${service} on ${datetime} is confirmed.`;
+        confirmationPopup.style.display = "flex";
+    }
+
+    function saveAppointment(appointment) {
+        let appointments = JSON.parse(localStorage.getItem("appointments")) || [];
+        appointments.push(appointment);
+        localStorage.setItem("appointments", JSON.stringify(appointments));
+    }
+
+    form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const isValid = validateName() && validateEmail() && validatePhone() && validateDateTime() && validateTerms();
+
+        if (isValid) {
+            const newAppointment = {
+                name: nameInput.value,
+                service: serviceDropdown.value,
+                datetime: datetimeInput.value,
+                status: "Pending"
+            };
+
+            saveAppointment(newAppointment);
+            loadAppointments();
+            showConfirmationPopup(newAppointment.name, newAppointment.service, newAppointment.datetime);
+
+            modal.style.display = "none";
+            form.reset();
+        }
+    });
+
+    document.addEventListener("click", (e) => {
+        let appointments = JSON.parse(localStorage.getItem("appointments")) || [];
+
+        if (e.target.classList.contains("reschedule-btn")) {
+            const index = e.target.getAttribute("data-index");
+            const newDateTime = prompt("Enter new date & time:");
+            if (newDateTime) {
+                appointments[index].datetime = newDateTime;
+                localStorage.setItem("appointments", JSON.stringify(appointments));
+                loadAppointments();
+            }
+        }
+
+        if (e.target.classList.contains("cancel-btn")) {
+            const index = e.target.getAttribute("data-index");
+            appointments.splice(index, 1);
+            localStorage.setItem("appointments", JSON.stringify(appointments));
+            loadAppointments();
+        }
+    });
+
+    document.addEventListener("change", (e) => {
+        if (e.target.classList.contains("status-update")) {
+            const index = e.target.getAttribute("data-index");
+            let appointments = JSON.parse(localStorage.getItem("appointments")) || [];
+            appointments[index].status = e.target.value;
+            localStorage.setItem("appointments", JSON.stringify(appointments));
+            loadAppointments();
+        }
+    });
+
+    closePopupBtn.addEventListener("click", () => {
+        confirmationPopup.style.display = "none";
+    });
 
     loadAppointments();
-  }
 });
-
-function loadAppointments() {
-  appointmentsTable.innerHTML = "";
-  const appointments = JSON.parse(localStorage.getItem("appointments")) || [];
-
-  appointments.forEach((appointment, index) => {
-    const row = appointmentsTable.insertRow();
-    row.innerHTML = `
-      <td>${appointment.name}</td>
-      <td>${appointment.service}</td>
-      <td>${new Date(appointment.dateTime).toLocaleString()}</td>
-      <td>${appointment.status}</td>
-      <td>
-        <button onclick="cancelAppointment(${index})">Cancel</button>
-      </td>
-    `;
-  });
-}
-
-function cancelAppointment(index) {
-  let appointments = JSON.parse(localStorage.getItem("appointments"));
-  appointments.splice(index, 1);
-  localStorage.setItem("appointments", JSON.stringify(appointments));
-  loadAppointments();
-}
-
-loadAppointments();
